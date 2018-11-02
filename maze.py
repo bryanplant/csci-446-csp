@@ -1,11 +1,13 @@
 from collections import defaultdict
 from tkinter import *
 
+
 class Maze:
     data = []
     width = 0
     height = 0
-    colors = defaultdict(list)
+    ends = {}
+    colors = set()
 
     # variables for drawing maze
     draw_shapes = []
@@ -23,7 +25,8 @@ class Maze:
                 for j, char in enumerate(line_list):
                     self.data[-1].append(char)
                     if char != '_':
-                        self.colors[char].append((i, j))
+                        self.ends[(i, j)] = char
+                        self.colors.add(char)
         file.close()
         # get maze width and height
         self.width = len(self.data[0])
@@ -70,47 +73,34 @@ class Maze:
             return "white"
 
     def draw(self):
-        for i in range(self.height):
-            for j in range(self.width):
+        self.canvas.delete('all')
+        for row in range(self.height):
+            for col in range(self.width):
                 self.canvas.create_rectangle(
-                    i * self.node_size,
-                    j * self.node_size,
-                    i * self.node_size + self.node_size,
-                    j * self.node_size + self.node_size,
+                    col * self.node_size,
+                    row * self.node_size,
+                    col * self.node_size + self.node_size,
+                    row * self.node_size + self.node_size,
                     fill="#696969"
                 )
 
-        for k, v in self.colors.items():
-            color = self.get_color(k)
+                if self.data[row][col] != '_' and (row, col) not in self.ends:
+                    self.canvas.create_oval(
+                        col * self.node_size + self.node_size * .3,
+                        row * self.node_size + self.node_size * .3,
+                        col * self.node_size + self.node_size * .7,
+                        row * self.node_size + self.node_size * .7,
+                        fill=self.get_color(self.data[row][col])
+                    )
 
-            for node in v:
-                self.canvas.create_oval(
-                    node[1] * self.node_size + self.node_size * .1,
-                    node[0] * self.node_size + self.node_size * .1,
-                    node[1] * self.node_size + self.node_size * .9,
-                    node[0] * self.node_size + self.node_size * .9,
-                    fill=color
-                )
+        for node, char in self.ends.items():
+            color = self.get_color(char)
+
+            self.canvas.create_oval(
+                node[1] * self.node_size + self.node_size * .1,
+                node[0] * self.node_size + self.node_size * .1,
+                node[1] * self.node_size + self.node_size * .9,
+                node[0] * self.node_size + self.node_size * .9,
+                fill=color
+            )
         self.tk.update()
-
-        # color = None
-        # for i, line in enumerate(self.data):
-        #     for j, char in enumerate(line):
-        #         if char == ' ':
-        #             if [i, j] in path:
-        #                 color = "green"
-        #             elif [i, j] in visited:
-        #                 color = "blue"
-        #             else:
-        #                 color = "white"
-        #         elif char == '%':
-        #             color = "black"
-        #         elif char == 'P':
-        #             color = "red"
-        #         elif char == '*':
-        #             color = "yellow"
-        #
-        #         if color != self.canvas.itemcget(self.squares[i][j], "fill"):
-        #             self.canvas.itemconfig(self.squares[i][j], fill=color)
-        # self.tk.update()
-

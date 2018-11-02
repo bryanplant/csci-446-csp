@@ -18,6 +18,7 @@ class Main:
         # run selected algorithm on selected maze
         self.algorithm.solve(self.maze)
         print("Elapsed:", time.time() - start)
+        self.maze.draw()
 
         # wait until user presses a key to end
         input("Press Enter to close...")
