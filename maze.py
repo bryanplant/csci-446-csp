@@ -1,4 +1,3 @@
-from collections import defaultdict
 from tkinter import *
 
 
@@ -41,6 +40,70 @@ class Maze:
             self.tk, width=self.display_width, height=self.display_height)
         self.canvas.pack()
         self.draw()
+
+    def find_empty_square(self):
+        for row in range(self.height):
+            for col in range(self.width):
+                if self.data[row][col] == '_':
+                    return row, col
+        return None
+
+    def _get_possible_neighbors(self, row, col):
+        return [row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]
+
+    def _count_same_empty(self, row, col, color):
+        same = 0
+        empty = 0
+
+        for r, c in self._get_possible_neighbors(row, col):
+            if self.height > r >= 0 and self.width > c >= 0:
+                if self.data[r][c] == color:
+                    same += 1
+                elif self.data[r][c] == '_':
+                    empty += 1
+
+        return same, empty
+
+    def _neighbor_is_valid(self, row, col):
+        neighbor_color = self.data[row][col]
+        if neighbor_color == '_':
+            return True
+
+        same, empty = self._count_same_empty(row, col, neighbor_color)
+
+        if (row, col) in self.ends:
+            if same >= 1:
+                return True
+            if empty == 0:
+                return False
+        else:
+            if same == 2:
+                return True
+            if same > 2:
+                return False
+            if empty < 2 - same:
+                return False
+
+        return True
+
+    def _neighbors_are_valid(self, row, col):
+        for r, c in self._get_possible_neighbors(row, col):
+            if self.height > r >= 0 and self.width > c >= 0:
+                if not self._neighbor_is_valid(r, c):
+                    return False
+
+        color = self.data[row][col]
+        same, empty = self._count_same_empty(row, col, color)
+
+        if same == 2:
+            return True
+        if same > 2:
+            return False
+
+        return True
+
+    def is_valid(self, row, col):
+        return self._neighbors_are_valid(row, col)
 
     def get_color(self, char):
         if char == 'B':
@@ -85,11 +148,10 @@ class Maze:
                 )
 
                 if self.data[row][col] != '_' and (row, col) not in self.ends:
-                    self.canvas.create_oval(
-                        col * self.node_size + self.node_size * .3,
-                        row * self.node_size + self.node_size * .3,
-                        col * self.node_size + self.node_size * .7,
-                        row * self.node_size + self.node_size * .7,
+                    self._create_circle(
+                        col*self.node_size + self.node_size/2,
+                        row*self.node_size + self.node_size/2,
+                        self.node_size/5,
                         fill=self.get_color(self.data[row][col])
                     )
 
@@ -104,3 +166,6 @@ class Maze:
                 fill=color
             )
         self.tk.update()
+
+    def _create_circle(self, x, y, r, **kwargs):
+        return self.canvas.create_oval(x - r, y - r, x + r, y + r, **kwargs)
