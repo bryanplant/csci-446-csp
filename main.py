@@ -14,10 +14,17 @@ class Main:
         self.algorithm = self.get_algorithm()
         self.maze = self.get_maze()
 
+        # draw initial setup
+        self.maze.draw()
+
+        # store start time
         start = time.time()
         # run selected algorithm on selected maze
         self.algorithm.solve(self.maze)
+
+        # print how long algorithm took
         print("Elapsed:", time.time() - start)
+        # draw solution
         self.maze.draw()
 
         # wait until user presses a key to end
@@ -61,6 +68,7 @@ class Main:
             return BacktrackingDumb()
         elif selection == 2:
             return BacktrackingSmart()
+
 
 main = Main()
 main.run()

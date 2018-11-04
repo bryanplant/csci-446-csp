@@ -2,11 +2,11 @@ from tkinter import *
 
 
 class Maze:
-    data = []
+    data = []       # char values of each square
     width = 0
     height = 0
-    ends = {}
-    colors = set()
+    endpoints = {}       # represents endpoints - dictionary of (r, c) to char
+    colors = set()  # possible colors
 
     # variables for drawing maze
     draw_shapes = []
@@ -16,7 +16,7 @@ class Maze:
     node_size = None
 
     def __init__(self, maze_file):
-        # get maze data and color positions
+        # get maze data, possible colors, and color positions
         with open(maze_file, 'r') as file:
             for i, line in enumerate(file):
                 line_list = list(line.strip('\n'))
@@ -24,13 +24,14 @@ class Maze:
                 for j, char in enumerate(line_list):
                     self.data[-1].append(char)
                     if char != '_':
-                        self.ends[(i, j)] = char
+                        self.endpoints[(i, j)] = char
                         self.colors.add(char)
         file.close()
         # get maze width and height
         self.width = len(self.data[0])
         self.height = len(self.data)
 
+        # get node_size and display_height for drawing
         self.node_size = int(self.display_width / self.width)
         self.display_height = int(self.node_size * self.height)
 
@@ -39,8 +40,8 @@ class Maze:
         self.canvas = Canvas(
             self.tk, width=self.display_width, height=self.display_height)
         self.canvas.pack()
-        self.draw()
 
+    # iterate through all squares and find first empty
     def find_empty_square(self):
         for row in range(self.height):
             for col in range(self.width):
@@ -48,9 +49,12 @@ class Maze:
                     return row, col
         return None
 
-    def _get_possible_neighbors(self, row, col):
+    # return the row and col of all neighbors around given row and col
+    @staticmethod
+    def _get_possible_neighbors(row, col):
         return [row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]
 
+    # count the number of empty and same-colored squares around given square
     def _count_same_empty(self, row, col, color):
         same = 0
         empty = 0
@@ -64,19 +68,26 @@ class Maze:
 
         return same, empty
 
+    # return if the neighbor meets constraints
     def _neighbor_is_valid(self, row, col):
         neighbor_color = self.data[row][col]
+        # valid if square is empty
         if neighbor_color == '_':
             return True
 
+        # get number of neighbors that are the same color and number that are empty
         same, empty = self._count_same_empty(row, col, neighbor_color)
 
-        if (row, col) in self.ends:
+        # if square is an endpoint
+        if (row, col) in self.endpoints:
+            # endpoint must have one or more neighbors with the same color
             if same >= 1:
                 return True
             if empty == 0:
                 return False
         else:
+            # non-endpoint must have 2 or less neighbors with the same color
+            # if it does not have two, it must have enough empty neighbors
             if same == 2:
                 return True
             if same > 2:
@@ -86,7 +97,9 @@ class Maze:
 
         return True
 
+    # return if neighboring squares are valid
     def _neighbors_are_valid(self, row, col):
+        # iterate through neighbors and check for validity
         for r, c in self._get_possible_neighbors(row, col):
             if self.height > r >= 0 and self.width > c >= 0:
                 if not self._neighbor_is_valid(r, c):
@@ -95,6 +108,7 @@ class Maze:
         color = self.data[row][col]
         same, empty = self._count_same_empty(row, col, color)
 
+        # check if new square has valid number of surrounding colors
         if same == 2:
             return True
         if same > 2:
@@ -102,6 +116,7 @@ class Maze:
 
         return True
 
+    # return if maze is valid with new addition
     def is_valid(self, row, col):
         return self._neighbors_are_valid(row, col)
 
@@ -135,6 +150,7 @@ class Maze:
         else:
             return "white"
 
+    # draw the maze
     def draw(self):
         self.canvas.delete('all')
         for row in range(self.height):
@@ -147,7 +163,7 @@ class Maze:
                     fill="#696969"
                 )
 
-                if self.data[row][col] != '_' and (row, col) not in self.ends:
+                if self.data[row][col] != '_' and (row, col) not in self.endpoints:
                     self._create_circle(
                         col*self.node_size + self.node_size/2,
                         row*self.node_size + self.node_size/2,
@@ -155,7 +171,7 @@ class Maze:
                         fill=self.get_color(self.data[row][col])
                     )
 
-        for node, char in self.ends.items():
+        for node, char in self.endpoints.items():
             color = self.get_color(char)
 
             self.canvas.create_oval(
@@ -167,5 +183,6 @@ class Maze:
             )
         self.tk.update()
 
+    # create a tkinter circle with x, y and radius
     def _create_circle(self, x, y, r, **kwargs):
         return self.canvas.create_oval(x - r, y - r, x + r, y + r, **kwargs)
