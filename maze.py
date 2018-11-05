@@ -47,6 +47,30 @@ class Maze:
             for col in range(self.width):
                 self.update_neighbor(row, col)
 
+    def is_box(self, squares, color):
+        for r, c in squares:
+            if not (self.height > r >= 0 and self.width > c >= 0):
+                return False
+            if self.data[r][c] != color:
+                return False
+        return True
+
+    def detect_box(self, r, c):
+        color = self.data[r][c]
+        # box to top left
+        if self.is_box([[r, c-1], [r-1, c-1], [r-1, c]], color):
+            return True
+        # box to bottom left
+        if self.is_box([[r, c-1], [r+1, c-1], [r+1, c]], color):
+            return True
+        # box to top right
+        if self.is_box([[r, c+1], [r-1, c+1], [r-1, c]], color):
+            return True
+        # box to bottom right
+        if self.is_box([[r, c+1], [r+1, c+1], [r+1, c]], color):
+            return True
+
+
     def update_neighbor(self, row, col):
         if (row, col) in self.legal_values:
             del self.legal_values[(row, col)]
@@ -133,19 +157,22 @@ class Maze:
 
     # return if maze is valid with new addition
     def is_valid(self, row, col):
-        # iterate through neighbors and check for validity
-        for r, c in self._get_valid_neighbors(row, col):
-            if not self._neighbor_is_valid(r, c):
-                return False
-
         color = self.data[row][col]
         same, empty = self._count_same_empty(row, col, color)
-
         # check if new square has valid number of surrounding colors
         if same > 2:
             return False
         if 2 - same > empty:
             return False
+
+        if self.detect_box(row, col):
+            return False
+
+        # iterate through neighbors and check for validity
+        for r, c in self._get_valid_neighbors(row, col):
+            if not self._neighbor_is_valid(r, c):
+                return False
+
 
         return True
 

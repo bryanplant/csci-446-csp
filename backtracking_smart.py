@@ -5,7 +5,10 @@ class BacktrackingSmart(Algorithm):
 
     def solve(self, maze):
         maze.preprocess()
+        self.solve_recursive(maze)
 
+    def solve_recursive(self, maze):
+        maze.preprocess()
         # get most constrained square to populate
         rc = maze.get_most_constrained()
         if rc is None:
@@ -17,15 +20,11 @@ class BacktrackingSmart(Algorithm):
             # set empty square to a value
             maze.data[r][c] = color
             # maze.draw()
-            # check if this color is valid
-            if maze.is_valid(r, c):
-                # recurse
-                if self.solve(maze):
-                    return True
-                # set color back if maze not solved
-                maze.data[r][c] = '_'
-            else:
-                # otherwise set color back
-                maze.data[r][c] = '_'
+
+            # recurse
+            if self.solve_recursive(maze):
+                return True
+            # set color back if maze not solved
+            maze.data[r][c] = '_'
 
         return False
