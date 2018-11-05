@@ -1,7 +1,5 @@
-from algorithm import Algorithm
 
-
-class BacktrackingSmart(Algorithm):
+class BacktrackingSmart:
 
     def solve(self, maze):
         maze.preprocess()

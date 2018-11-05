@@ -1,7 +1,5 @@
-from algorithm import Algorithm
 
-
-class BacktrackingDumb(Algorithm):
+class BacktrackingDumb:
 
     def solve(self, maze):
         # get next empty square
