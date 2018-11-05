@@ -2,11 +2,12 @@ from tkinter import *
 
 
 class Maze:
-    data = []       # char values of each square
+    data = []           # char values of each square
+    legal_values = {}   # possible values for each square
     width = 0
     height = 0
-    endpoints = {}       # represents endpoints - dictionary of (r, c) to char
-    colors = set()  # possible colors
+    endpoints = {}      # represents endpoints - dictionary of (r, c) to char
+    colors = set()      # possible colors
 
     # variables for drawing maze
     draw_shapes = []
@@ -41,6 +42,36 @@ class Maze:
             self.tk, width=self.display_width, height=self.display_height)
         self.canvas.pack()
 
+    def preprocess(self):
+        for row in range(self.height):
+            for col in range(self.width):
+                self.update_neighbor(row, col)
+
+    def update_neighbor(self, row, col):
+        if (row, col) in self.legal_values:
+            del self.legal_values[(row, col)]
+        if self.data[row][col] == '_':
+            self.legal_values[(row, col)] = []
+            for color in self.colors:
+                self.data[row][col] = color
+                if self.is_valid(row, col):
+                    self.legal_values[(row, col)].append(color)
+            self.data[row][col] = '_'
+
+    def update_neighbors(self, row, col):
+        self.update_neighbor(row, col)
+        for r, c in self._get_valid_neighbors(row, col):
+            self.update_neighbor(r, c)
+
+    def get_most_constrained(self):
+        min_colors = len(self.colors) + 1
+        min_rc = None
+        for rc, colors in self.legal_values.items():
+            if min_colors > len(colors):
+                min_colors = len(colors)
+                min_rc = rc
+        return min_rc
+
     # iterate through all squares and find first empty
     def find_empty_square(self):
         for row in range(self.height):
@@ -50,21 +81,24 @@ class Maze:
         return None
 
     # return the row and col of all neighbors around given row and col
-    @staticmethod
-    def _get_possible_neighbors(row, col):
-        return [row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]
+    def _get_valid_neighbors(self, row, col):
+        neighbors = [row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]
+        valid = []
+        for r, c in neighbors:
+            if self.height > r >= 0 and self.width > c >= 0:
+                valid.append([r, c])
+        return valid
 
     # count the number of empty and same-colored squares around given square
     def _count_same_empty(self, row, col, color):
         same = 0
         empty = 0
 
-        for r, c in self._get_possible_neighbors(row, col):
-            if self.height > r >= 0 and self.width > c >= 0:
-                if self.data[r][c] == color:
-                    same += 1
-                elif self.data[r][c] == '_':
-                    empty += 1
+        for r, c in self._get_valid_neighbors(row, col):
+            if self.data[r][c] == color:
+                same += 1
+            elif self.data[r][c] == '_':
+                empty += 1
 
         return same, empty
 
@@ -97,30 +131,26 @@ class Maze:
 
         return True
 
-    # return if neighboring squares are valid
-    def _neighbors_are_valid(self, row, col):
+    # return if maze is valid with new addition
+    def is_valid(self, row, col):
         # iterate through neighbors and check for validity
-        for r, c in self._get_possible_neighbors(row, col):
-            if self.height > r >= 0 and self.width > c >= 0:
-                if not self._neighbor_is_valid(r, c):
-                    return False
+        for r, c in self._get_valid_neighbors(row, col):
+            if not self._neighbor_is_valid(r, c):
+                return False
 
         color = self.data[row][col]
         same, empty = self._count_same_empty(row, col, color)
 
         # check if new square has valid number of surrounding colors
-        if same == 2:
-            return True
         if same > 2:
+            return False
+        if 2 - same > empty:
             return False
 
         return True
 
-    # return if maze is valid with new addition
-    def is_valid(self, row, col):
-        return self._neighbors_are_valid(row, col)
-
-    def get_color(self, char):
+    @staticmethod
+    def get_color(char):
         if char == 'B':
             return "blue"
         # Amaranth
