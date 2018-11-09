@@ -70,6 +70,35 @@ class Maze:
         if self.is_box([[r, c+1], [r+1, c+1], [r+1, c]], color):
             return True
 
+    def order_colors(self, row, col):
+        colors = []
+
+        # add adjacent endpoint colors
+        for r, c in self._get_valid_neighbors(row, col):
+            color = self.data[r][c]
+            if (r, c) in self.endpoints and color in self.legal_values[(row, col)] and color not in colors:
+                colors.append(color)
+
+        # add other neighboring colors
+        neighbor_colors = self.get_neighbor_colors(row, col)
+        for color in self.legal_values[(row, col)]:
+            if color not in colors:
+                if color in neighbor_colors and color not in colors:
+                    colors.append(color)
+
+        # add all other valid values
+        for color in self.legal_values[(row, col)]:
+            if color not in colors:
+                colors.append(color)
+        return colors
+
+    def get_neighbor_colors(self, r, c):
+        colors = set()
+        for r, c in self._get_valid_neighbors(r, c):
+            color = self.data[r][c]
+            if color != '_':
+                colors.add(color)
+        return colors
 
     def update_neighbor(self, row, col):
         if (row, col) in self.legal_values:
