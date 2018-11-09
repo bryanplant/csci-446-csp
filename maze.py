@@ -4,15 +4,15 @@ from tkinter import *
 class Maze:
     data = []           # char values of each square
     legal_values = {}   # possible values for each square
-    width = 0
-    height = 0
     endpoints = {}      # represents endpoints - dictionary of (r, c) to char
     colors = set()      # possible colors
+    width = 0
+    height = 0
 
     # variables for drawing maze
     draw_shapes = []
     display = None
-    display_width = 800
+    display_width = 600
     display_height = None
     node_size = None
 
@@ -45,7 +45,7 @@ class Maze:
     def preprocess(self):
         for row in range(self.height):
             for col in range(self.width):
-                self.update_neighbor(row, col)
+                self.update_square(row, col)
 
     def is_box(self, squares, color):
         for r, c in squares:
@@ -100,7 +100,7 @@ class Maze:
                 colors.add(color)
         return colors
 
-    def update_neighbor(self, row, col):
+    def update_square(self, row, col):
         if (row, col) in self.legal_values:
             del self.legal_values[(row, col)]
         if self.data[row][col] == '_':
@@ -112,15 +112,21 @@ class Maze:
             self.data[row][col] = '_'
 
     def update_neighbors(self, row, col):
-        self.update_neighbor(row, col)
+        self.update_square(row, col)
+        for r, c in self._get_valid_neighbors_8(row, col):
+            self.update_square(r, c)
+
+    def is_near_endpoint(self, row, col):
         for r, c in self._get_valid_neighbors(row, col):
-            self.update_neighbor(r, c)
+            if (r, c) in self.endpoints:
+                return True
+        return False
 
     def get_most_constrained(self):
         min_colors = len(self.colors) + 1
         min_rc = None
         for rc, colors in self.legal_values.items():
-            if min_colors > len(colors):
+            if len(colors) < min_colors or (len(colors) == min_colors and self.is_near_endpoint(rc[0], rc[1])):
                 min_colors = len(colors)
                 min_rc = rc
         return min_rc
@@ -136,6 +142,16 @@ class Maze:
     # return the row and col of all neighbors around given row and col
     def _get_valid_neighbors(self, row, col):
         neighbors = [row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]
+        valid = []
+        for r, c in neighbors:
+            if self.height > r >= 0 and self.width > c >= 0:
+                valid.append([r, c])
+        return valid
+
+    # return the row and col of all neighbors around given row and col
+    def _get_valid_neighbors_8(self, row, col):
+        neighbors = [row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1], \
+                    [row - 1, col - 1], [row - 1, col + 1] , [row + 1, col - 1], [row + 1, col + 1]
         valid = []
         for r, c in neighbors:
             if self.height > r >= 0 and self.width > c >= 0:
@@ -201,8 +217,6 @@ class Maze:
         for r, c in self._get_valid_neighbors(row, col):
             if not self._neighbor_is_valid(r, c):
                 return False
-
-
         return True
 
     @staticmethod
