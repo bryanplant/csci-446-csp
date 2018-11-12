@@ -2,16 +2,17 @@ from tkinter import *
 
 
 class Maze:
-    data = []       # char values of each square
+    data = []           # char values of each square
+    legal_values = {}   # possible values for each square
+    endpoints = {}      # represents endpoints - dictionary of (r, c) to char
+    colors = set()      # possible colors
     width = 0
     height = 0
-    endpoints = {}       # represents endpoints - dictionary of (r, c) to char
-    colors = set()  # possible colors
 
     # variables for drawing maze
     draw_shapes = []
     display = None
-    display_width = 800
+    display_width = 600
     display_height = None
     node_size = None
 
@@ -41,6 +42,95 @@ class Maze:
             self.tk, width=self.display_width, height=self.display_height)
         self.canvas.pack()
 
+    def preprocess(self):
+        for row in range(self.height):
+            for col in range(self.width):
+                self.update_square(row, col)
+
+    def is_box(self, squares, color):
+        for r, c in squares:
+            if not (self.height > r >= 0 and self.width > c >= 0):
+                return False
+            if self.data[r][c] != color:
+                return False
+        return True
+
+    def detect_box(self, r, c):
+        color = self.data[r][c]
+        # box to top left
+        if self.is_box([[r, c-1], [r-1, c-1], [r-1, c]], color):
+            return True
+        # box to bottom left
+        if self.is_box([[r, c-1], [r+1, c-1], [r+1, c]], color):
+            return True
+        # box to top right
+        if self.is_box([[r, c+1], [r-1, c+1], [r-1, c]], color):
+            return True
+        # box to bottom right
+        if self.is_box([[r, c+1], [r+1, c+1], [r+1, c]], color):
+            return True
+
+    def order_colors(self, row, col):
+        colors = []
+
+        # add adjacent endpoint colors
+        for r, c in self._get_valid_neighbors(row, col):
+            color = self.data[r][c]
+            if (r, c) in self.endpoints and color in self.legal_values[(row, col)] and color not in colors:
+                colors.append(color)
+
+        # add other neighboring colors
+        neighbor_colors = self.get_neighbor_colors(row, col)
+        for color in self.legal_values[(row, col)]:
+            if color not in colors:
+                if color in neighbor_colors and color not in colors:
+                    colors.append(color)
+
+        # add all other valid values
+        for color in self.legal_values[(row, col)]:
+            if color not in colors:
+                colors.append(color)
+        return colors
+
+    def get_neighbor_colors(self, r, c):
+        colors = set()
+        for r, c in self._get_valid_neighbors(r, c):
+            color = self.data[r][c]
+            if color != '_':
+                colors.add(color)
+        return colors
+
+    def update_square(self, row, col):
+        if (row, col) in self.legal_values:
+            del self.legal_values[(row, col)]
+        if self.data[row][col] == '_':
+            self.legal_values[(row, col)] = []
+            for color in self.colors:
+                self.data[row][col] = color
+                if self.is_valid(row, col):
+                    self.legal_values[(row, col)].append(color)
+            self.data[row][col] = '_'
+
+    def update_neighbors(self, row, col):
+        self.update_square(row, col)
+        for r, c in self._get_valid_neighbors_8(row, col):
+            self.update_square(r, c)
+
+    def is_near_endpoint(self, row, col):
+        for r, c in self._get_valid_neighbors(row, col):
+            if (r, c) in self.endpoints:
+                return True
+        return False
+
+    def get_most_constrained(self):
+        min_colors = len(self.colors) + 1
+        min_rc = None
+        for rc, colors in self.legal_values.items():
+            if len(colors) < min_colors or (len(colors) == min_colors and self.is_near_endpoint(rc[0], rc[1])):
+                min_colors = len(colors)
+                min_rc = rc
+        return min_rc
+
     # iterate through all squares and find first empty
     def find_empty_square(self):
         for row in range(self.height):
@@ -50,21 +140,34 @@ class Maze:
         return None
 
     # return the row and col of all neighbors around given row and col
-    @staticmethod
-    def _get_possible_neighbors(row, col):
-        return [row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]
+    def _get_valid_neighbors(self, row, col):
+        neighbors = [row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]
+        valid = []
+        for r, c in neighbors:
+            if self.height > r >= 0 and self.width > c >= 0:
+                valid.append([r, c])
+        return valid
+
+    # return the row and col of all neighbors around given row and col
+    def _get_valid_neighbors_8(self, row, col):
+        neighbors = [row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1], \
+                    [row - 1, col - 1], [row - 1, col + 1] , [row + 1, col - 1], [row + 1, col + 1]
+        valid = []
+        for r, c in neighbors:
+            if self.height > r >= 0 and self.width > c >= 0:
+                valid.append([r, c])
+        return valid
 
     # count the number of empty and same-colored squares around given square
     def _count_same_empty(self, row, col, color):
         same = 0
         empty = 0
 
-        for r, c in self._get_possible_neighbors(row, col):
-            if self.height > r >= 0 and self.width > c >= 0:
-                if self.data[r][c] == color:
-                    same += 1
-                elif self.data[r][c] == '_':
-                    empty += 1
+        for r, c in self._get_valid_neighbors(row, col):
+            if self.data[r][c] == color:
+                same += 1
+            elif self.data[r][c] == '_':
+                empty += 1
 
         return same, empty
 
@@ -97,30 +200,27 @@ class Maze:
 
         return True
 
-    # return if neighboring squares are valid
-    def _neighbors_are_valid(self, row, col):
-        # iterate through neighbors and check for validity
-        for r, c in self._get_possible_neighbors(row, col):
-            if self.height > r >= 0 and self.width > c >= 0:
-                if not self._neighbor_is_valid(r, c):
-                    return False
-
-        color = self.data[row][col]
-        same, empty = self._count_same_empty(row, col, color)
-
-        # check if new square has valid number of surrounding colors
-        if same == 2:
-            return True
-        if same > 2:
-            return False
-
-        return True
-
     # return if maze is valid with new addition
     def is_valid(self, row, col):
-        return self._neighbors_are_valid(row, col)
+        color = self.data[row][col]
+        same, empty = self._count_same_empty(row, col, color)
+        # check if new square has valid number of surrounding colors
+        if same > 2:
+            return False
+        if 2 - same > empty:
+            return False
 
-    def get_color(self, char):
+        if self.detect_box(row, col):
+            return False
+
+        # iterate through neighbors and check for validity
+        for r, c in self._get_valid_neighbors(row, col):
+            if not self._neighbor_is_valid(r, c):
+                return False
+        return True
+
+    @staticmethod
+    def get_color(char):
         if char == 'B':
             return "blue"
         # Amaranth
