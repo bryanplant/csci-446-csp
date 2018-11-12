@@ -24,6 +24,7 @@ class Main:
 
         # print how long algorithm took
         print("Elapsed:", time.time() - start)
+        print("Assigned:", self.algorithm.count)
         # draw solution
         self.maze.draw()
 

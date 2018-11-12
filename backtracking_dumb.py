@@ -1,5 +1,6 @@
 
 class BacktrackingDumb:
+    count = 0
 
     def solve(self, maze):
         # get next empty square
@@ -13,6 +14,7 @@ class BacktrackingDumb:
         for color in maze.colors:
             # set empty square to a value
             maze.data[r][c] = color
+            self.count += 1
             # check if this color is valid
             if maze.is_valid(r, c):
                 # recurse

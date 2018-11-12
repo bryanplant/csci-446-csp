@@ -2,6 +2,8 @@ import keyboard
 
 
 class BacktrackingSmart:
+    count = 0
+
     def solve(self, maze):
         maze.preprocess()
         self.solve_recursive(maze)
@@ -18,6 +20,7 @@ class BacktrackingSmart:
         for color in maze.order_colors(r, c):
             # set empty square to a value
             maze.data[r][c] = color
+            self.count += 1
             maze.update_neighbors(r, c)
             if keyboard.is_pressed('d'):
                 maze.draw()
