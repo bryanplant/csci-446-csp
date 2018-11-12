@@ -4,10 +4,12 @@ import keyboard
 class BacktrackingSmart:
     count = 0
 
+    # Preprocess and start solving the maze
     def solve(self, maze):
         maze.preprocess()
         self.solve_recursive(maze)
 
+    # Solve the problem recursively
     def solve_recursive(self, maze):
 
         # get most constrained square to populate

@@ -1,4 +1,5 @@
 from tkinter import *
+import sys
 
 
 class Maze:
@@ -18,16 +19,21 @@ class Maze:
 
     def __init__(self, maze_file):
         # get maze data, possible colors, and color positions
-        with open(maze_file, 'r') as file:
-            for i, line in enumerate(file):
-                line_list = list(line.strip('\n'))
-                self.data.append([])
-                for j, char in enumerate(line_list):
-                    self.data[-1].append(char)
-                    if char != '_':
-                        self.endpoints[(i, j)] = char
-                        self.colors.add(char)
-        file.close()
+        try:
+            with open(maze_file, 'r') as file:
+                for i, line in enumerate(file):
+                    line_list = list(line.strip('\n'))
+                    self.data.append([])
+                    for j, char in enumerate(line_list):
+                        self.data[-1].append(char)
+                        if char != '_':
+                            self.endpoints[(i, j)] = char
+                            self.colors.add(char)
+            file.close()
+        except:
+            print('unable to open the file. Please check the path and try again')
+            sys.exit(1)
+
         # get maze width and height
         self.width = len(self.data[0])
         self.height = len(self.data)
@@ -55,6 +61,7 @@ class Maze:
                 return False
         return True
 
+    # Checks if a line is a box, this helps speed things up in certain cases
     def detect_box(self, r, c):
         color = self.data[r][c]
         # box to top left
@@ -70,6 +77,7 @@ class Maze:
         if self.is_box([[r, c+1], [r+1, c+1], [r+1, c]], color):
             return True
 
+    # Orders all possible colors by how close they are to this position
     def order_colors(self, row, col):
         colors = []
 
@@ -92,6 +100,7 @@ class Maze:
                 colors.append(color)
         return colors
 
+    # Get the colors of the neighbors
     def get_neighbor_colors(self, r, c):
         colors = set()
         for r, c in self._get_valid_neighbors(r, c):
@@ -100,6 +109,7 @@ class Maze:
                 colors.add(color)
         return colors
 
+    # Update the square
     def update_square(self, row, col):
         if (row, col) in self.legal_values:
             del self.legal_values[(row, col)]
@@ -111,17 +121,20 @@ class Maze:
                     self.legal_values[(row, col)].append(color)
             self.data[row][col] = '_'
 
+    # Update the squares around us
     def update_neighbors(self, row, col):
         self.update_square(row, col)
         for r, c in self._get_valid_neighbors_8(row, col):
             self.update_square(r, c)
 
+    # If the neighbor is an endpoint
     def is_near_endpoint(self, row, col):
         for r, c in self._get_valid_neighbors(row, col):
             if (r, c) in self.endpoints:
                 return True
         return False
 
+    # Gets the most constrained square
     def get_most_constrained(self):
         min_colors = len(self.colors) + 1
         min_rc = None
@@ -141,7 +154,8 @@ class Maze:
 
     # return the row and col of all neighbors around given row and col
     def _get_valid_neighbors(self, row, col):
-        neighbors = [row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]
+        neighbors = [row - 1, col], [row + 1,
+                                     col], [row, col - 1], [row, col + 1]
         valid = []
         for r, c in neighbors:
             if self.height > r >= 0 and self.width > c >= 0:
@@ -151,7 +165,8 @@ class Maze:
     # return the row and col of all neighbors around given row and col
     def _get_valid_neighbors_8(self, row, col):
         neighbors = [row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1], \
-                    [row - 1, col - 1], [row - 1, col + 1] , [row + 1, col - 1], [row + 1, col + 1]
+                    [row - 1, col - 1], [row - 1, col +
+                                         1], [row + 1, col - 1], [row + 1, col + 1]
         valid = []
         for r, c in neighbors:
             if self.height > r >= 0 and self.width > c >= 0:
@@ -219,6 +234,7 @@ class Maze:
                 return False
         return True
 
+    # Gets a color based on the char passed in
     @staticmethod
     def get_color(char):
         if char == 'B':
@@ -252,9 +268,11 @@ class Maze:
 
     # draw the maze
     def draw(self):
+        # Clear the canvas
         self.canvas.delete('all')
         for row in range(self.height):
             for col in range(self.width):
+                # Draw the grid
                 self.canvas.create_rectangle(
                     col * self.node_size,
                     row * self.node_size,
@@ -262,7 +280,7 @@ class Maze:
                     row * self.node_size + self.node_size,
                     fill="#696969"
                 )
-
+                #  Draws small circles if the data is not _
                 if self.data[row][col] != '_' and (row, col) not in self.endpoints:
                     self._create_circle(
                         col*self.node_size + self.node_size/2,
@@ -270,7 +288,7 @@ class Maze:
                         self.node_size/5,
                         fill=self.get_color(self.data[row][col])
                     )
-
+        # Draw the endpoint circles
         for node, char in self.endpoints.items():
             color = self.get_color(char)
 
